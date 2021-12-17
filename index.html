@@ -23,9 +23,12 @@
         </style>
     </head>
     <body>
-        <div id="date"></div> <button onclick="toggleColorMap()">Toggle Threshold/Linear Colormap</button>
+
+        <div id="date"></div> 
+        <div>Note: Fires large enough to be shown don't really start to appear until July 07/01/2020</div>
+        <button onclick="toggleColorMap()">Toggle Threshold/Linear Colormap</button>
         <input id="date-slider" type="range" min="0" max="365" step="1" value="0" oninput="convertDayToDate(value)">
-        <button id="play-button"> Play </button>
+        <button id="play-button" onclick="play()"> Play </button>
         
         <svg width="975" height="510"></svg>
         <div id='tooltip-container'>
@@ -42,6 +45,7 @@
 
 
         </div>
+        <paragraph>Data From https://aqs.epa.gov/aqsweb/airdata/download_files.html#AQI and https://www.fire.ca.gov/incidents/2020/</paragraph>
         <script>
             let useThresholdScale = false
 
@@ -54,13 +58,37 @@
                 document.getElementById('date-slider').value = day
                 convertDayToDate(day)
             }
-            
+            let playing = false
+            let timer;
+            //https://stackoverflow.com/questions/41481808/time-slider-to-move-automatically-using-setinterval
+            function play(){
+                playing = ! playing
+                if (playing){
+                    let slider = document.getElementById('date-slider')
+                    document.getElementById('play-button').textContent = 'Pause'
+                    timer = window.setInterval ( () => {
+                        day = slider.value
+                        if(day >=364){
+                            document.getElementById('play-button').textContent = 'Play'
+                            clearInterval(timer)
+                        } else {
+                            goToDay(parseInt(day)+1)
+                        }
+                    },500);
+
+                } else {
+                    document.getElementById('play-button').textContent = 'Play'
+                    window.clearInterval(timer)
+                    playing = false
+                }
+            }
             //the answer found on
             //https://stackoverflow.com/questions/64564973/creating-a-range-slider-dates-for-a-choropleth-map
             //is used as the basis for much of the following code but changed to work with counties, an albers json map, the particular dataset i'm using
             //adding points for the fires aswell, etc.
             //Other referenced material include: https://bost.ocks.org/mike/join/  http://bl.ocks.org/phil-pedruco/7745589
-            //and https://d3-wiki.readthedocs.io/zh_CN/master/Home/
+            // https://d3-wiki.readthedocs.io/zh_CN/master/Home/ 
+            //and https://stackoverflow.com/questions/34934577/html-range-slider-with-play-pause-loop
 
 
             let svg = d3.select("svg");            
@@ -84,15 +112,14 @@
                 update(date)
             }
 
-            let play = false
 
             let thresholdScale = d3.scaleThreshold()
                 .domain([0,51,101,151,201,301])
-                .range(['black','#00e400','yellow','#ff7e00','red','#8e3f97','#7e0023'])
+                .range(['darkgrey','#00e400','yellow','#ff7e00','red','#8e3f97','#7e0023'])
 
             let linearScale = d3.scaleLinear()
                 .domain([-1,0,25,75,150,300,500,10000])
-                .range(['black','#00e400','#00e400','yellow','red','#8e3f97','darkred'])
+                .range(['darkgrey','#00e400','#00e400','yellow','red','#8e3f97','darkred'])
             
 
             let projection = d3.geoAlbersUsa().scale(2000).translate([987.5, 255])
@@ -137,7 +164,7 @@
                 });
                 //console.log(fires)
                 render(us)
-                update(startDate)
+                goToDay(200)
             }
 
             function render(us) {
@@ -192,7 +219,7 @@
                             //console.log(d.Size)
                             return Math.min(3+(d.Size.replaceAll(',','')/10000),12)
                         })
-                        .style('opacity',.8)
+                        .style('opacity',.7)
                     .merge(circle)
                         .attr("cx", function(d) {
                             //console.log(d.Name)
@@ -204,13 +231,13 @@
                         .attr("cy", function(d) {
                             return projection([d.Lon,d.Lat])[1];
                         })
-                        .attr('fill','Cyan')
+                        .attr('fill','DodgerBlue')
                         //.attr('transform',transform)
                         .attr('r',(d) => {
                             //console.log(d.Size)
                             return Math.min(3+(d.Size.replaceAll(',','')/10000),12)
                         })
-                        .style('opacity',.7)
+                        .style('opacity',.9)
                         .on('mouseover', (d) => {
                             toolTip .html('<table>' + 
                                             '<tr><th> Name: </th><td>'  +  d.Name + '</td></tr>' +
@@ -247,7 +274,6 @@
                     }
                 }
             }
-            
         </script>
     </body>
 </html>
